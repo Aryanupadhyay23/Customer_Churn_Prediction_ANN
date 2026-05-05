@@ -1,3 +1,13 @@
+---
+title: Customer Churn Prediction ANN
+emoji: 🤖
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_file: streamlit_app/app.py
+pinned: false
+---
+
 # Customer Churn Prediction using ANN
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue)  
@@ -5,7 +15,17 @@
 ![Status](https://img.shields.io/badge/Status-Completed-success)  
 ![Deployment](https://img.shields.io/badge/Streamlit-App-red)
 
-An end-to-end Deep Learning project to predict customer churn using an Artificial Neural Network (ANN). The project includes preprocessing, model training, evaluation, and deployment using Streamlit.
+An end-to-end Deep Learning project to predict customer churn using an Artificial Neural Network (ANN). The project covers preprocessing, model training, evaluation, and deployment using Streamlit on Hugging Face Spaces.
+
+---
+
+## Live Demo
+
+Access the deployed application:
+
+https://huggingface.co/spaces/Aryan2301/Customer_Churn_Prediction_ANN
+
+The app allows users to input customer details and get real-time churn predictions.
 
 ---
 
@@ -97,27 +117,26 @@ Classification Report:
   - customer-churn-prediction.ipynb  
   - prediction.ipynb  
 - images/  
-  - roc_curve.png  
-  - training_curve.png  
 
 ---
 
-## Deployment
+## Deployment Details
 
-Run locally:
-
-    pip install -r requirements.txt  
-    streamlit run streamlit_app/app.py  
+- Platform: Hugging Face Spaces  
+- Type: Docker-based deployment  
+- Frontend: Streamlit  
+- Backend: TensorFlow ANN model  
 
 ---
 
 ## Key Learnings
 
 - Handling categorical variables for ANN  
-- Importance of scaling  
+- Importance of feature scaling  
 - Avoiding data leakage  
-- Building end-to-end ML systems  
-- Deployment using Streamlit  
+- Managing class imbalance effects  
+- Building end-to-end ML pipelines  
+- Deploying ML models using Streamlit and Docker  
 
 ---
 
@@ -125,7 +144,7 @@ Run locally:
 
 - Hyperparameter tuning  
 - Improve recall for churn class  
-- Handle class imbalance  
-- Docker and CI/CD deployment  
+- Advanced feature engineering  
+- CI/CD pipeline integration  
 
 ---
