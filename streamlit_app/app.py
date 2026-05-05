@@ -2,31 +2,31 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
+import os
 from tensorflow.keras.models import load_model
 
+# get current file directory and project root
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
 
-# Load Model & Preprocessing
+# load trained ANN model
+model = load_model(os.path.join(ROOT_DIR, "model", "model.h5"))
 
-model = load_model("model\model.h5")
-
-with open("artifacts\scaler.pkl", "rb") as f:
+# load preprocessing objects
+with open(os.path.join(ROOT_DIR, "artifacts", "scaler.pkl"), "rb") as f:
     scaler = pickle.load(f)
 
-with open("artifacts\label_encoder_gender.pkl", "rb") as f:
+with open(os.path.join(ROOT_DIR, "artifacts", "label_encoder_gender.pkl"), "rb") as f:
     label_encoder_gender = pickle.load(f)
 
-with open("artifacts\onehot_encoder_geo.pkl", "rb") as f:
+with open(os.path.join(ROOT_DIR, "artifacts", "onehot_encoder_geo.pkl"), "rb") as f:
     encoder = pickle.load(f)
 
-
-# UI Title
-
+# app title and description
 st.title("Customer Churn Prediction (ANN)")
 st.write("Enter customer details to predict churn")
 
-
-# User Inputs
-
+# user input fields
 credit_score = st.number_input("Credit Score", 300, 900, 600)
 geography = st.selectbox("Geography", ["France", "Germany", "Spain"])
 gender = st.selectbox("Gender", ["Male", "Female"])
@@ -38,12 +38,10 @@ has_cr_card = st.selectbox("Has Credit Card", [0, 1])
 is_active = st.selectbox("Is Active Member", [0, 1])
 salary = st.number_input("Estimated Salary", 0.0, 200000.0, 50000.0)
 
-
-# Prediction Button
-
+# prediction trigger
 if st.button("Predict"):
 
-    # Create DataFrame
+    # create dataframe from user input
     input_data = pd.DataFrame([{
         "CreditScore": credit_score,
         "Geography": geography,
@@ -57,24 +55,21 @@ if st.button("Predict"):
         "EstimatedSalary": salary
     }])
 
-
-    # Preprocessing
-
-
-    # Encode Gender
+    # apply label encoding to gender
     input_data["Gender"] = label_encoder_gender.transform(input_data["Gender"])
 
-    # One-Hot Encode Geography
+    # apply one-hot encoding to geography
     geo_encoded = encoder.transform(input_data[["Geography"]])
     geo_df = pd.DataFrame(
         geo_encoded,
         columns=encoder.get_feature_names_out(["Geography"])
     )
 
+    # replace geography column with encoded columns
     input_data = input_data.drop("Geography", axis=1)
     input_data = pd.concat([input_data, geo_df], axis=1)
 
-    # Column Order 
+    # ensure same column order as training
     columns_order = [
         'CreditScore', 'Gender', 'Age', 'Tenure', 'Balance',
         'NumOfProducts', 'HasCrCard', 'IsActiveMember', 'EstimatedSalary',
@@ -83,18 +78,19 @@ if st.button("Predict"):
 
     input_data = input_data.reindex(columns=columns_order, fill_value=0)
 
-    # Scale Numerical Features
+    # scale numerical features
     num_cols = ['CreditScore', 'Age', 'Tenure', 'Balance',
                 'NumOfProducts', 'EstimatedSalary']
 
     input_data[num_cols] = scaler.transform(input_data[num_cols])
 
-    # Prediction
-
+    # model prediction
     prob = model.predict(input_data)[0][0]
 
+    # display probability
     st.subheader(f"Churn Probability: {prob:.2f}")
 
+    # final decision
     if prob > 0.5:
         st.error("Customer is likely to churn")
     else:
