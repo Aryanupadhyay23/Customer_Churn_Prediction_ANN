@@ -1,13 +1,3 @@
----
-title: Customer Churn Prediction ANN
-emoji: 🤖
-colorFrom: blue
-colorTo: purple
-sdk: docker
-app_file: streamlit_app/app.py
-pinned: false
----
-
 # Customer Churn Prediction using ANN
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue)  
