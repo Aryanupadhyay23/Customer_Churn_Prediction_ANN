@@ -1,2 +1,35 @@
-notes.txt
+# Python byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
 myenv/
+venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# IDE and Editor configs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Project specific notes / scratch files
+notes.txt
+scratch/

@@ -1,97 +1,80 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import pickle
 import os
-from tensorflow.keras.models import load_model
+import sys
+import streamlit as st
 
-# get current file directory and project root
+# Ensure project root is in sys.path so 'src' can be imported cleanly
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
-# load trained ANN model
-model = load_model(os.path.join(ROOT_DIR, "model", "model.h5"))
+from src.pipeline.predict_pipeline import PredictPipeline, CustomData
 
-# load preprocessing objects
-with open(os.path.join(ROOT_DIR, "artifacts", "scaler.pkl"), "rb") as f:
-    scaler = pickle.load(f)
 
-with open(os.path.join(ROOT_DIR, "artifacts", "label_encoder_gender.pkl"), "rb") as f:
-    label_encoder_gender = pickle.load(f)
+# Cache pipeline initialization to avoid reloading model on every interaction
+@st.cache_resource
+def get_prediction_pipeline():
+    return PredictPipeline()
 
-with open(os.path.join(ROOT_DIR, "artifacts", "onehot_encoder_geo.pkl"), "rb") as f:
-    encoder = pickle.load(f)
 
-# app title and description
-st.title("Customer Churn Prediction (ANN)")
-st.write("Enter customer details to predict churn")
+pipeline = get_prediction_pipeline()
 
-# user input fields
-credit_score = st.number_input("Credit Score", 300, 900, 600)
-geography = st.selectbox("Geography", ["France", "Germany", "Spain"])
-gender = st.selectbox("Gender", ["Male", "Female"])
-age = st.slider("Age", 18, 100, 40)
-tenure = st.slider("Tenure", 0, 10, 3)
-balance = st.number_input("Balance", 0.0, 250000.0, 50000.0)
-num_products = st.slider("Number of Products", 1, 4, 2)
-has_cr_card = st.selectbox("Has Credit Card", [0, 1])
-is_active = st.selectbox("Is Active Member", [0, 1])
-salary = st.number_input("Estimated Salary", 0.0, 200000.0, 50000.0)
+# App Header
+st.set_page_config(page_title="Customer Churn Prediction", page_icon="🏦", layout="centered")
+st.title("🏦 Customer Churn Prediction (ANN)")
+st.markdown("Enter customer financial and demographic details to assess churn risk.")
 
-# prediction trigger
-if st.button("Predict"):
+st.divider()
 
-    # create dataframe from user input
-    input_data = pd.DataFrame([{
-        "CreditScore": credit_score,
-        "Geography": geography,
-        "Gender": gender,
-        "Age": age,
-        "Tenure": tenure,
-        "Balance": balance,
-        "NumOfProducts": num_products,
-        "HasCrCard": has_cr_card,
-        "IsActiveMember": is_active,
-        "EstimatedSalary": salary
-    }])
+# Input layout using Streamlit columns for a clean UI
+col1, col2 = st.columns(2)
 
-    # apply label encoding to gender
-    input_data["Gender"] = label_encoder_gender.transform(input_data["Gender"])
+with col1:
+    credit_score = st.number_input("Credit Score", min_value=300, max_value=900, value=600)
+    geography = st.selectbox("Geography", ["France", "Germany", "Spain"])
+    gender = st.selectbox("Gender", ["Male", "Female"])
+    age = st.slider("Age", min_value=18, max_value=100, value=40)
+    tenure = st.slider("Tenure (Years)", min_value=0, max_value=10, value=3)
 
-    # apply one-hot encoding to geography
-    geo_encoded = encoder.transform(input_data[["Geography"]])
-    geo_df = pd.DataFrame(
-        geo_encoded,
-        columns=encoder.get_feature_names_out(["Geography"])
-    )
+with col2:
+    balance = st.number_input("Account Balance", min_value=0.0, max_value=250000.0, value=50000.0, step=1000.0)
+    num_products = st.slider("Number of Products", min_value=1, max_value=4, value=2)
+    has_cr_card = st.selectbox("Has Credit Card", options=[1, 0], format_func=lambda x: "Yes" if x == 1 else "No")
+    is_active = st.selectbox("Is Active Member", options=[1, 0], format_func=lambda x: "Yes" if x == 1 else "No")
+    salary = st.number_input("Estimated Salary", min_value=0.0, max_value=200000.0, value=50000.0, step=1000.0)
 
-    # replace geography column with encoded columns
-    input_data = input_data.drop("Geography", axis=1)
-    input_data = pd.concat([input_data, geo_df], axis=1)
+st.divider()
 
-    # ensure same column order as training
-    columns_order = [
-        'CreditScore', 'Gender', 'Age', 'Tenure', 'Balance',
-        'NumOfProducts', 'HasCrCard', 'IsActiveMember', 'EstimatedSalary',
-        'Geography_France', 'Geography_Germany', 'Geography_Spain'
-    ]
+# Prediction Trigger
+if st.button("Predict Churn Risk", type="primary", use_container_width=True):
+    with st.spinner("Analyzing customer data through ANN pipeline..."):
+        # Package UI input into CustomData
+        customer_data = CustomData(
+            credit_score=credit_score,
+            geography=geography,
+            gender=gender,
+            age=age,
+            tenure=tenure,
+            balance=balance,
+            num_products=num_products,
+            has_cr_card=has_cr_card,
+            is_active=is_active,
+            salary=salary
+        )
 
-    input_data = input_data.reindex(columns=columns_order, fill_value=0)
+        # Get DataFrame from user input
+        features_df = customer_data.get_data_as_data_frame()
 
-    # scale numerical features
-    num_cols = ['CreditScore', 'Age', 'Tenure', 'Balance',
-                'NumOfProducts', 'EstimatedSalary']
+        # Delegate prediction to dedicated prediction pipeline
+        prob, is_churn = pipeline.predict(features_df)
 
-    input_data[num_cols] = scaler.transform(input_data[num_cols])
+    # Display Results
+    st.subheader("Prediction Result")
+    progress_val = min(max(float(prob), 0.0), 1.0)
+    st.progress(progress_val)
+    st.write(f"**Churn Probability:** `{prob * 100:.2f}%`")
 
-    # model prediction
-    prob = model.predict(input_data)[0][0]
-
-    # display probability
-    st.subheader(f"Churn Probability: {prob:.2f}")
-
-    # final decision
-    if prob > 0.5:
-        st.error("Customer is likely to churn")
+    if is_churn:
+        st.error(f"⚠️ **High Churn Risk!** Customer is likely to leave the bank (Probability: {prob:.2f}).")
     else:
-        st.success("Customer is not likely to churn")
+        st.success(f"✅ **Low Churn Risk.** Customer is likely to remain with the bank (Probability: {prob:.2f}).")
